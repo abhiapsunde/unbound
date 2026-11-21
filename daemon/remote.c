@@ -5980,7 +5980,7 @@ fr_construct_from_config(struct fast_reload_thread* fr,
 		fr_construct_clear(ct);
 		return 0;
 	}
-	if(!auth_zones_apply_cfg(ct->auth_zones, newcfg, 1, &ct->use_rpz,
+	if(!auth_zones_apply_cfg(ct->auth_zones, newcfg, 1, 1, &ct->use_rpz,
 		fr->worker->daemon->env, &fr->worker->daemon->mods)) {
 		fr_construct_clear(ct);
 		return 0;
@@ -6617,6 +6617,9 @@ fr_atomic_copy_cfg(struct config_file* oldcfg, struct config_file* cfg,
 	COPY_VAR_int(iter_scrub_rrsig);
 	COPY_VAR_int(max_global_quota);
 	COPY_VAR_int(iter_scrub_promiscuous);
+	COPY_VAR_size_t(iter_scrub_glue_count);
+	COPY_VAR_int(delegpt_max_addr);
+	COPY_VAR_int(delegpt_max_ns);
 
 #undef COPY_VAR_int
 #undef COPY_VAR_ptr

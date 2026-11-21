@@ -2171,11 +2171,12 @@ These options are part of the ``server:`` section.
         The ordering of the modules is significant, the order decides the order
         of processing.
 
-    Setting this to just "iterator" will result in a non-validating server.
-    Setting this to "validator iterator" will turn on DNSSEC validation.
+    Setting this to just ``"iterator"`` results in a non-validating server.
+    Setting this to ``"validator iterator"`` (default) enables the DNSSEC
+    validator module but not DNSSEC validation.
 
     .. note::
-        You must also set trust-anchors for validation to be useful.
+        To turn on DNSSEC validation you must configure trust-anchors.
 
     Adding ``respip`` to the front will cause RPZ processing to be done on all
     queries.
@@ -3397,6 +3398,34 @@ These options are part of the ``server:`` section.
     Default: 32
 
 
+@@UAHL@unbound.conf@iter-scrub-glue-count@@: *<number>*
+    Limit on the number of glue RRs from upstream responses.
+    This protects against too large numbers of additional section records.
+    When it is exceeded, the remainder is removed from the message.
+
+    Default: 100
+
+
+@@UAHL@unbound.conf@delegpt-max-addr@@: *<number>*
+    The max number of addresses in a delegation point.
+    This protects the internals of the iterator from very long lists of
+    items to examine.
+    That stops it from looping over them to find new glue, cache lookups,
+    and sending queries there.
+
+    Default: 100
+
+
+@@UAHL@unbound.conf@delegpt-max-ns@@: *<number>*
+    The max number of nameserver names in a delegation point.
+    This protects the internals of the iterator from a very long list
+    of nameserver names to examine.
+    That stops it from looping over that list to find names in cache,
+    and making queries there.
+
+    Default: 20
+
+
 @@UAHL@unbound.conf@fast-server-permil@@: *<number>*
     Specify how many times out of 1000 to pick from the set of fastest servers.
     0 turns the feature off.
@@ -3882,6 +3911,28 @@ cache).
 @@UAHL@unbound.conf.forward@forward-no-cache@@: *<yes or no>*
     If enabled, data inside the forward is not cached.
     This is useful when you want immediate changes to be visible.
+
+    Default: no
+
+
+@@UAHL@unbound.conf.forward@forward-sequential@@: *<yes or no>*
+    If enabled, the servers are used in the order in which the
+    :ref:`forward-addr<unbound.conf.forward.forward-addr>` entries appear in
+    the configuration, instead of the default selection by round trip time.
+    The first server is used for every query.
+    If it does not answer, the query is retried with the next server in the
+    list, and so on.
+    A server that times out three times in a row is tried after the servers
+    that answer, until its entry in the infrastructure cache expires (see
+    :ref:`infra-host-ttl<unbound.conf.infra-host-ttl>`), after which it is
+    tried first again.
+    A server that is slow but answers keeps being used.
+    This is useful when a later server is a fallback that should only be
+    used when the earlier ones are unavailable, for example when the first
+    server applies filtering that the fallback does not.
+    Addresses from :ref:`forward-host<unbound.conf.forward.forward-host>` are
+    used after all the
+    :ref:`forward-addr<unbound.conf.forward.forward-addr>` entries.
 
     Default: no
 

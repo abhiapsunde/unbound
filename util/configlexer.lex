@@ -348,6 +348,7 @@ forward-addr{COLON}		{ YDVAR(1, VAR_FORWARD_ADDR) }
 forward-host{COLON}		{ YDVAR(1, VAR_FORWARD_HOST) }
 forward-first{COLON}		{ YDVAR(1, VAR_FORWARD_FIRST) }
 forward-no-cache{COLON}		{ YDVAR(1, VAR_FORWARD_NO_CACHE) }
+forward-sequential{COLON}	{ YDVAR(1, VAR_FORWARD_SEQUENTIAL) }
 forward-ssl-upstream{COLON}	{ YDVAR(1, VAR_FORWARD_SSL_UPSTREAM) }
 forward-tls-upstream{COLON}	{ YDVAR(1, VAR_FORWARD_SSL_UPSTREAM) }
 forward-tcp-upstream{COLON}	{ YDVAR(1, VAR_FORWARD_TCP_UPSTREAM) }
@@ -614,6 +615,9 @@ val-hash-attempts{COLON}	{ YDVAR(1, VAR_VAL_HASH_ATTEMPTS) }
 max-transfer-size{COLON}	{ YDVAR(1, VAR_MAX_TRANSFER_SIZE) }
 max-transfer-time{COLON}	{ YDVAR(1, VAR_MAX_TRANSFER_TIME) }
 iter-scrub-promiscuous{COLON}	{ YDVAR(1, VAR_ITER_SCRUB_PROMISCUOUS) }
+iter-scrub-glue-count{COLON}	{ YDVAR(1, VAR_ITER_SCRUB_GLUE_COUNT) }
+delegpt-max-addr{COLON}		{ YDVAR(1, VAR_DELEGPT_MAX_ADDR) }
+delegpt-max-ns{COLON}		{ YDVAR(1, VAR_DELEGPT_MAX_NS) }
 <INITIAL,val>{NEWLINE}		{ LEXOUT(("NL\n")); cfg_parser->line++; }
 
 	/* Quoted strings. Strip leading and ending quotes */

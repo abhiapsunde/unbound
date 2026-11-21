@@ -55,6 +55,7 @@ server:
 	# interface: 192.0.2.154
 	# interface: 192.0.2.154@5003
 	# interface: 2001:db8::5
+	# interface: fe80::1%eth0
 	# interface: eth0@5003
 
 	# enable this feature to copy the source address of queries to reply.
@@ -208,6 +209,18 @@ server:
 
 	# Limit on number of DNSSEC hash attempts for a query.
 	# val-hash-attempts: 32
+
+	# Limit on number of glue RRs in a response. Protects against too
+	# much work on the response.
+	# iter-scrub-glue-count: 100
+
+	# Max number of addresses in a delegation point. Protects against
+	# too much work to loop over them.
+	# delegpt-max-addr: 100
+
+	# Max number of nameserver names in a delegation point. Protects
+	# against too much work to loop over them.
+	# delegpt-max-ns: 20
 
 	# msec for waiting for an unknown server to reply.  Increase if you
 	# are behind a slow satellite link, to eg. 1128.
@@ -672,6 +685,7 @@ server:
 	# most modules have to be listed at the beginning of the line,
 	# except cachedb(just before iterator), and python (at the beginning,
 	# or, just before the iterator).
+	# Note that validator needs configured trust-anchors to be of any use.
 	# module-config: "validator iterator"
 
 	# File with trusted keys, kept up-to-date using RFC5011 probes,
@@ -1259,6 +1273,7 @@ remote-control:
 # 	forward-tcp-upstream: no
 # 	forward-tls-upstream: no
 #	forward-no-cache: no
+# 	forward-sequential: no
 # forward-zone:
 # 	name: "example.org"
 # 	forward-host: fwd.example.com

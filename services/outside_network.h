@@ -849,12 +849,14 @@ struct comm_point* outnet_comm_point_for_tcp(struct outside_network* outnet,
  * @param host: hostname to use for the destination. part of http request.
  * @param path: pathname to lookup, eg. name of the file on the destination.
  * @param cfg: running configuration for User-Agent setup.
+ * @param etag: if this is nonNULL, it is used for the HTTP request. With
+ *	'If-None-Match: etag', it avoids a download if it has not changed.
  * @return http_out commpoint, or NULL.
  */
 struct comm_point* outnet_comm_point_for_http(struct outside_network* outnet,
 	comm_point_callback_type* cb, void* cb_arg,
 	struct sockaddr_storage* to_addr, socklen_t to_addrlen, int timeout,
-	int ssl, char* host, char* path, struct config_file* cfg);
+	int ssl, char* host, char* path, struct config_file* cfg, char* etag);
 
 /** connect tcp connection to addr, 0 on failure */
 int outnet_tcp_connect(int s, struct sockaddr_storage* addr, socklen_t addrlen);

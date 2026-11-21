@@ -50,6 +50,17 @@
 #include "sldns/rrdef.h"
 #include "sldns/sbuffer.h"
 
+/** Max number of addresses in a delegation point.
+ * This protects the internals of the iterator from very long lists of
+ * items to examine. Looping over them to find new glue, cache lookups,
+ * and sending queries there. */
+int delegpt_max_addr = 100;
+/** Max number of nameserver names in a delegation point
+ * This protects the internals of the iterator from a very long list of
+ * nameserver names to examine. Looping over that list to find names in
+ * cache, and making queries there. */
+int delegpt_max_ns = 20;
+
 struct delegpt* 
 delegpt_create(struct regional* region)
 {
@@ -74,6 +85,7 @@ struct delegpt* delegpt_copy(struct delegpt* dp, struct regional* region)
 	copy->has_parent_side_NS = dp->has_parent_side_NS;
 	copy->ssl_upstream = dp->ssl_upstream;
 	copy->tcp_upstream = dp->tcp_upstream;
+	copy->sequential = dp->sequential;
 	for(ns = dp->nslist; ns; ns = ns->next) {
 		if(!delegpt_add_ns(copy, region, ns->name, ns->lame,
 			ns->tls_auth_name, ns->port))
@@ -89,6 +101,8 @@ struct delegpt* delegpt_copy(struct delegpt* dp, struct regional* region)
 		if(!delegpt_add_addr(copy, region, &a->addr, a->addrlen,
 			a->bogus, a->lame, a->tls_auth_name, -1, NULL))
 			return NULL;
+		/* the new address is at the front of the target list */
+		copy->target_list->order = a->order;
 	}
 	return copy;
 }
@@ -110,6 +124,15 @@ delegpt_add_ns(struct delegpt* dp, struct regional* region, uint8_t* name,
 	size_t len;
 	(void)dname_count_size_labels(name, &len);
 	log_assert(!dp->dp_type_mlc);
+	if(dp->num_ns >= delegpt_max_ns) {
+		if(verbosity >= VERB_ALGO) {
+			char n[LDNS_MAX_DOMAINLEN];
+			dname_str(name, n);
+			verbose(VERB_ALGO, "delegpt at max ns %d, "
+				"skip item %s", delegpt_max_ns, n);
+		}
+		return 1;
+	}
 	/* slow check for duplicates to avoid counting failures when
 	 * adding the same server as a dependency twice */
 	if(delegpt_find_ns(dp, name, len))
@@ -139,6 +162,7 @@ delegpt_add_ns(struct delegpt* dp, struct regional* region, uint8_t* name,
 	}
 	ns->next = dp->nslist;
 	dp->nslist = ns;
+	dp->num_ns++;
 	return 1;
 }
 
@@ -206,6 +230,15 @@ delegpt_add_addr(struct delegpt* dp, struct regional* region,
 {
 	struct delegpt_addr* a;
 	log_assert(!dp->dp_type_mlc);
+	if(dp->num_addr >= delegpt_max_addr) {
+		if(verbosity >= VERB_ALGO) {
+			char str[256];
+			snprintf(str, sizeof(str), "delegpt at max addr %d, "
+				"skip addr", delegpt_max_addr);
+			log_addr(VERB_ALGO, str, addr, addrlen);
+		}
+		return 1;
+	}
 	if(port != -1) {
 		log_assert(port>0);
 		sockaddr_store_port(addr, addrlen, port);
@@ -232,6 +265,7 @@ delegpt_add_addr(struct delegpt* dp, struct regional* region,
 	a->bogus = bogus;
 	a->lame = lame;
 	a->dnsseclame = 0;
+	a->order = -1;
 	if(tls_auth_name) {
 		a->tls_auth_name = regional_strdup(region, tls_auth_name);
 		if(!a->tls_auth_name)
@@ -243,6 +277,7 @@ delegpt_add_addr(struct delegpt* dp, struct regional* region,
 	dp->target_list = a;
 	a->next_usable = dp->usable_list;
 	dp->usable_list = a;
+	dp->num_addr++;
 	return 1;
 }
 
@@ -653,6 +688,15 @@ int delegpt_add_ns_mlc(struct delegpt* dp, uint8_t* name, uint8_t lame,
 	size_t len;
 	(void)dname_count_size_labels(name, &len);
 	log_assert(dp->dp_type_mlc);
+	if(dp->num_ns >= delegpt_max_ns) {
+		if(verbosity >= VERB_ALGO) {
+			char n[LDNS_MAX_DOMAINLEN];
+			dname_str(name, n);
+			verbose(VERB_ALGO, "delegpt at max ns %d, "
+				"skip item %s", delegpt_max_ns, n);
+		}
+		return 1;
+	}
 	/* slow check for duplicates to avoid counting failures when
 	 * adding the same server as a dependency twice */
 	if(delegpt_find_ns(dp, name, len))
@@ -686,6 +730,7 @@ int delegpt_add_ns_mlc(struct delegpt* dp, uint8_t* name, uint8_t lame,
 	}
 	ns->next = dp->nslist;
 	dp->nslist = ns;
+	dp->num_ns++;
 	return 1;
 }
 
@@ -695,6 +740,15 @@ int delegpt_add_addr_mlc(struct delegpt* dp, struct sockaddr_storage* addr,
 {
 	struct delegpt_addr* a;
 	log_assert(dp->dp_type_mlc);
+	if(dp->num_addr >= delegpt_max_addr) {
+		if(verbosity >= VERB_ALGO) {
+			char str[256];
+			snprintf(str, sizeof(str), "delegpt at max addr %d, "
+				"skip addr", delegpt_max_addr);
+			log_addr(VERB_ALGO, str, addr, addrlen);
+		}
+		return 1;
+	}
 	if(port != -1) {
 		log_assert(port>0);
 		sockaddr_store_port(addr, addrlen, port);
@@ -718,6 +772,7 @@ int delegpt_add_addr_mlc(struct delegpt* dp, struct sockaddr_storage* addr,
 	a->bogus = bogus;
 	a->lame = lame;
 	a->dnsseclame = 0;
+	a->order = -1;
 	if(tls_auth_name) {
 		a->tls_auth_name = strdup(tls_auth_name);
 		if(!a->tls_auth_name) {
@@ -731,6 +786,7 @@ int delegpt_add_addr_mlc(struct delegpt* dp, struct sockaddr_storage* addr,
 	dp->target_list = a;
 	a->next_usable = dp->usable_list;
 	dp->usable_list = a;
+	dp->num_addr++;
 	return 1;
 }
 
